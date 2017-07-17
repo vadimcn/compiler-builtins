@@ -8,7 +8,7 @@ fn main() {
     let target = env::var("TARGET").unwrap();
 
     // Emscripten's runtime includes all the builtins
-    if target.contains("emscripten") {
+    if target.contains("asmjs") {
         return;
     }
 
@@ -21,13 +21,17 @@ fn main() {
     #[cfg(feature = "gen-tests")]
     tests::generate();
 
-    // Build missing intrinsics from compiler-rt C source code. If we're
-    // mangling names though we assume that we're also in test mode so we don't
-    // build anything and we rely on the upstream implementation of compiler-rt
-    // functions
-    if !cfg!(feature = "mangled-names") {
-        #[cfg(feature = "c")]
-        c::compile(&llvm_target);
+    if !target.contains("wasm32") {
+        // Build missing intrinsics from compiler-rt C source code. If we're
+        // mangling names though we assume that we're also in test mode so we don't
+        // build anything and we rely on the upstream implementation of compiler-rt
+        // functions
+        if !cfg!(feature = "mangled-names") {
+            #[cfg(feature = "c")]
+            c::compile(&llvm_target);
+        }
+    } else {
+        println!(r#"cargo:rustc-cfg=feature="mem""#);
     }
 
     // To compile intrinsics.rs for thumb targets, where there is no libc
